@@ -183,9 +183,9 @@ if (!dir.exists(results_dir)) {
 
 # Read Shen atlas mapping files
 lst_rois_mat <- readMat(file.path(shen_path, "lst_rois.mat"))
-nets         <- readMat(file.path(shen_path, "nets.mat")) %>% unlist()
-lst_nodes_txt<- readLines(file.path(shen_path, "lst_nodes_orig.txt"))
-nodes        <- readMat(file.path(shen_path, "nodes.mat")) %>% unlist() %>% as.numeric()
+nets <- readMat(file.path(shen_path, "nets.mat")) %>% unlist()
+lst_nodes_txt <- readLines(file.path(shen_path, "lst_nodes_orig.txt"))
+nodes <- readMat(file.path(shen_path, "nodes.mat")) %>% unlist() %>% as.numeric()
 
 # Rearrange positive consensus network into canonical ordering
 correlation_rearr_pos <- network_p_consensus[nodes, nodes]
