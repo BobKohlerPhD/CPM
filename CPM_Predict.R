@@ -1,10 +1,6 @@
 # =============================================================================
-# CPM Performance Analysis Script
-# =============================================================================
-# This script reads in CPM prediction output files from each iteration,
-# computes performance metrics (Spearman correlation for linear regression,
-# accuracy for logistic regression), and calculates p-values based on null
-# permutations. A summary table of performance metrics is produced.
+# This script reads in CPM prediction output files from each iteration, 
+# computes performance metrics, abd creates summary table/plots.
 # =============================================================================
 
 library(tidyverse)
@@ -14,13 +10,13 @@ library(tidyr)
 library(readxl)
 library(writexl)
 
-# ---------------------------
-# Global Settings and Parameters
-# ---------------------------
-read_path      <- "/Users/bobkohler/Desktop/hormone_cpm/hormone_cpm_output/cpm_output_pds/female_pds_rest/"
+#------------------------------#
+#         Parameters
+#------------------------------#
+read_path <- "/Users/bobkohler/Desktop/hormone_cpm/hormone_cpm_output/cpm_output_pds/female_pds_rest/"
 options(scipen = 999)
 
-# Set regression type ("linear" or "logistic")
+# Set regression ("linear" or "logistic")
 regression_type <- "linear"
 
 # Number of true CPM repeats and null (permutation) iterations
@@ -33,9 +29,10 @@ r_pos  <- numeric()
 r_neg  <- numeric()
 r_both <- numeric()
 
-# ---------------------------
-# Read Prediction Data from Iterations
-# ---------------------------
+#------------------------------#
+# Read Data from Iterations
+#------------------------------#
+
 data_list <- vector("list", length(lst_of_i))
 for (i in lst_of_i) {
   file_path <- file.path(read_path, sprintf("y_prediction_iter%d.csv", i))
@@ -52,9 +49,9 @@ for (i in lst_of_i) {
   }
 }
 
-# ---------------------------
-# Calculate Performance Metrics
-# ---------------------------
+#------------------------------#
+# Calculate Performance 
+#------------------------------#
 for (data in data_list) {
   if (is.null(data)) next  # Skip missing entries
   if (regression_type == "linear") {
@@ -79,7 +76,7 @@ r_pos_null  <- r_pos[(n_repeats + 1):length(r_pos)]
 r_neg_null  <- r_neg[(n_repeats + 1):length(r_neg)]
 r_both_null <- r_both[(n_repeats + 1):length(r_both)]
 
-# Print average performance for true models
+# Print performance for true models
 metric_name <- ifelse(regression_type == "linear", "True Spearman r (Average)", "True Accuracy (Average)")
 cat(sprintf("%s: Positive %.4f, Negative %.4f, Both %.4f\n", 
             metric_name,
@@ -87,9 +84,9 @@ cat(sprintf("%s: Positive %.4f, Negative %.4f, Both %.4f\n",
             mean(r_neg_true, na.rm = TRUE),
             mean(r_both_true, na.rm = TRUE)))
 
-# ---------------------------
-# Compute p-values for Model Comparisons
-# ---------------------------
+#------------------------------#
+# Compute p-values 
+#------------------------------#
 p_value_one_tail <- function(null, true_mean) {
   if (true_mean >= 0) {
     mean(null >= true_mean, na.rm = TRUE)
@@ -110,9 +107,136 @@ p_pos_twotail  <- p_value_two_tail(r_pos_null,  mean(r_pos_true))
 p_neg_twotail  <- p_value_two_tail(r_neg_null,  mean(r_neg_true))
 p_both_twotail <- p_value_two_tail(r_both_null, mean(r_both_true))
 
-# ---------------------------
-# Create and Display Summary Table
-# ---------------------------
-df_p <- tibble(
-  `Null Model Iterations` = c(length(r_pos_null), length(r_neg_null), length(r_both_null)
+#------------------------------#
+#        Summary Table
+#------------------------------#
+(df_p <- tibble(
+  `Null Model Iterations` = c(length(r_pos_null), length(r_neg_null), length(r_both_null)),
+  `True Metric (Mean)` = c(mean(r_pos_true, na.rm = TRUE), mean(r_neg_true, na.rm = TRUE), mean(r_both_true, na.rm = TRUE)),
+  `True Metric (SD)` = c(sd(r_pos_true, na.rm = TRUE), sd(r_neg_true, na.rm = TRUE), sd(r_both_true, na.rm = TRUE)),
+  `p-value (One-Tail)` = c(p_pos_onetail, p_neg_onetail, p_both_onetail),
+  `p-value (Two-Tail)` = c(p_pos_twotail, p_neg_twotail, p_both_twotail)))
+
+(df_boxplot <- tibble(
+  `Null Model Size` = c(length(r_pos_null), length(r_neg_null), length(r_both_null)),
+  `True Model Size` = c(length(r_pos_true), length(r_neg_true), length(r_both_true)),
+  `Metric (Mean)` = c(mean(r_pos_true, na.rm = TRUE), mean(r_neg_true, na.rm = TRUE), mean(r_both_true, na.rm = TRUE)),
+  `p-value (One-Tail)` = c(p_pos_onetail, p_neg_onetail, p_both_onetail),
+  `Metric (Median)` = c(median(r_pos_true, na.rm = TRUE), median(r_neg_true, na.rm = TRUE), median(r_both_true, na.rm = TRUE))))
+
+df_p_table <- tibble(
+  Edge = c("Positive Edges", "Negative Edges", "Both Edges"),
+  `Null Model Iterations` = c(length(r_pos_null), length(r_neg_null), length(r_both_null)),
+  `True Metric (Mean)` = c(mean(r_pos_true, na.rm = TRUE),
+                           mean(r_neg_true, na.rm = TRUE),
+                           mean(r_both_true, na.rm = TRUE)),
+  `True Metric (SD)` = c(sd(r_pos_true, na.rm = TRUE),
+                         sd(r_neg_true, na.rm = TRUE),
+                         sd(r_both_true, na.rm = TRUE)),
+  `p-value (One-Tail)` = c(p_pos_onetail, p_neg_onetail, p_both_onetail),
+  `p-value (Two-Tail)` = c(p_pos_twotail, p_neg_twotail, p_both_twotail))
+
+#-----------------------------------------#
+# TABLE FOR ACCURACY OVER ITERATIONS 
+#-----------------------------------------#
+df_gt <- df_p_table %>%
+  gt(rowname_col = "Edge") %>%
+  tab_header(
+    title = "Performance Summary Table",
+    subtitle = "Summary for Positive, Negative, and Both Edges") %>%
+  fmt_number(
+    columns = c(`True Metric (Mean)`, `True Metric (SD)`,
+                `p-value (One-Tail)`, `p-value (Two-Tail)`),
+    decimals = 4) %>%
+  cols_label(
+    `Null Model Iterations` = "Null Iterations",
+    `True Metric (Mean)` = "Mean",
+    `True Metric (SD)` = "SD",
+    `p-value (One-Tail)` = "One-Tailed p-value",
+    `p-value (Two-Tail)` = "Two-Tailed p-value") %>%
+  cols_align(
+    align = "center",
+    columns = everything()) %>%
+  tab_style(
+    style = cell_borders(
+      sides = "all",
+      color = "black",
+      weight = px(2)),
+    locations = list(
+      cells_body(),
+      cells_column_labels(),
+      cells_stub())) %>%
+  tab_options(
+    table.border.top.style = "solid",
+    table.border.top.width = px(2),
+    table.border.top.color = "black",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.border.bottom.style = "solid",
+    heading.border.bottom.width = px(2),
+    heading.border.bottom.color = "black",
+    table_body.hlines.color = "black",
+    table_body.vlines.color = "black",
+    column_labels.border.bottom.color = "black")
+print(df_gt)  
+
+#------------------------------#
+#     PERFORMANCE BOXPLOTS     #
+#------------------------------#
+
+level_order <- c('Positive', 'Negative', 'Both') 
+create_plot <- function(data, x_var, y_var, edge_var, level_order, fill_values, color_values) {
+  ggplot(data, aes(x = factor(!!rlang::sym(x_var), levels = level_order), 
+                   y = !!rlang::sym(y_var), color = !!rlang::sym(edge_var), fill = !!rlang::sym(edge_var))) +
+    geom_boxplot(aes(fill = !!rlang::sym(edge_var),
+                     fill = after_scale(colorspace::lighten(fill, .2))),
+                 color = "black",
+                 width = .55,
+                 fatten = .75,
+                 linewidth = 1.25,
+                 outlier.shape = NA)+
+    geom_point(position = position_jitter(width = .2, seed = 0), size = 4, alpha = .4) +
+    geom_point(position = position_jitter(width = .2, seed = 0), size = 4, stroke = .4, shape = 1) +
+    scale_fill_manual(values = fill_values) +
+    scale_color_manual(values = color_values) +
+    theme_minimal() +
+    labs(x = "", y = "Accuracy" , title = "Average Cross-Validated Performance by Edge Type")+
+    theme(text = element_text(family = "Arial"),
+          plot.title = element_text(size = 20, face = "bold"),
+          axis.title.x = element_text(size = 20, face = "bold"),
+          axis.title.y = element_text(size = 22, face = "bold"),
+          axis.line = element_line(linewidth = 1.25),
+          axis.ticks.length = unit(.25, "cm"),
+          axis.text.y = element_text(size = 18, color = "black"),
+          axis.text.x = element_text(size = 22, color = "black", face = "bold"),
+          legend.text = element_text(size = 0, color = "black", face = "bold"),
+          legend.title = element_text(size = 0, color = "black", face = "bold"),
+          legend.position = "none")
+}
+
+r_true_df <- data.frame(Positive = r_pos_true, 
+                        Negative = r_neg_true, 
+                        Both = r_both_true) %>% 
+  pivot_longer(cols = everything(),
+               names_to = "edge",
+               values_to = "r_value",
+               values_drop_na = FALSE)
+                  
+(r_true_boxplot <- 
+    create_plot(r_true_df, 
+                x_var = "edge", 
+                y_var = "r_value", 
+                edge_var = "edge", 
+                level_order = level_order, 
+                fill_values = c('Positive' = 'red', 
+                                'Negative' = 'blue', 
+                                'Both' = 'purple'), 
+                color_values = c('Positive' = 'red', 
+                                 'Negative' = 'blue',
+                                 'Both' = 'purple')))
+
+# output_file <- file.path(read_path, "boxplot_performance.jpeg")
+#  ggsave(filename = output_file, plot = r_true_boxplot, dpi = 300, width = 8, height = 6, units = "in")
+
                               
