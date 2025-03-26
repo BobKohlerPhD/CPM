@@ -1,7 +1,8 @@
 # =============================================================================
-# This script reads in CPM prediction output files from each iteration, 
-# computes performance metrics, abd creates summary table/plots.
+# This script reads in CPM output files from each iteration, 
+# computes performance metrics, and creates summary table/plots.
 # =============================================================================
+read_path <- "/Users/bobkohler/Desktop/hormone_cpm/hormone_cpm_output/cpm_output_pds/female_pds_rest/"
 
 library(tidyverse)
 library(purrr)
@@ -9,12 +10,11 @@ library(readr)
 library(tidyr)
 library(readxl)
 library(writexl)
+options(scipen = 999)
 
 #------------------------------#
-#         Parameters
+#         Parameters           #
 #------------------------------#
-read_path <- "/Users/bobkohler/Desktop/hormone_cpm/hormone_cpm_output/cpm_output_pds/female_pds_rest/"
-options(scipen = 999)
 
 # Set regression ("linear" or "logistic")
 regression_type <- "linear"
@@ -30,7 +30,7 @@ r_neg  <- numeric()
 r_both <- numeric()
 
 #------------------------------#
-# Read Data from Iterations
+#   Data from Iterations       #
 #------------------------------#
 
 data_list <- vector("list", length(lst_of_i))
@@ -49,9 +49,10 @@ for (i in lst_of_i) {
   }
 }
 
-#------------------------------#
-# Calculate Performance 
-#------------------------------#
+#--------------------------------#
+# Calculate Performance Measures #  
+#--------------------------------#
+
 for (data in data_list) {
   if (is.null(data)) next  # Skip missing entries
   if (regression_type == "linear") {
@@ -68,7 +69,7 @@ for (data in data_list) {
   }
 }
 
-# Separate metrics for true (first n_repeats) and null (remaining iterations) models
+# Separate true (first n_repeats) and null (remaining iterations) metrics
 r_pos_true  <- r_pos[1:n_repeats]
 r_neg_true  <- r_neg[1:n_repeats]
 r_both_true <- r_both[1:n_repeats]
@@ -78,6 +79,7 @@ r_both_null <- r_both[(n_repeats + 1):length(r_both)]
 
 # Print performance for true models
 metric_name <- ifelse(regression_type == "linear", "True Spearman r (Average)", "True Accuracy (Average)")
+
 cat(sprintf("%s: Positive %.4f, Negative %.4f, Both %.4f\n", 
             metric_name,
             mean(r_pos_true, na.rm = TRUE),
@@ -85,7 +87,7 @@ cat(sprintf("%s: Positive %.4f, Negative %.4f, Both %.4f\n",
             mean(r_both_true, na.rm = TRUE)))
 
 #------------------------------#
-# Compute p-values 
+#      Compute p-values        #
 #------------------------------#
 p_value_one_tail <- function(null, true_mean) {
   if (true_mean >= 0) {
@@ -100,22 +102,19 @@ p_value_two_tail <- function(null, true_mean) {
   mean(abs(null) >= abs(true_mean), na.rm = TRUE)
 }
 
+# One tail
 p_pos_onetail  <- p_value_one_tail(r_pos_null,  mean(r_pos_true))
 p_neg_onetail  <- p_value_one_tail(r_neg_null,  mean(r_neg_true))
 p_both_onetail <- p_value_one_tail(r_both_null, mean(r_both_true))
+
+# Two tail 
 p_pos_twotail  <- p_value_two_tail(r_pos_null,  mean(r_pos_true))
 p_neg_twotail  <- p_value_two_tail(r_neg_null,  mean(r_neg_true))
 p_both_twotail <- p_value_two_tail(r_both_null, mean(r_both_true))
 
 #------------------------------#
-#        Summary Table
+#-------Summary Tables---------#
 #------------------------------#
-(df_p <- tibble(
-  `Null Model Iterations` = c(length(r_pos_null), length(r_neg_null), length(r_both_null)),
-  `True Metric (Mean)` = c(mean(r_pos_true, na.rm = TRUE), mean(r_neg_true, na.rm = TRUE), mean(r_both_true, na.rm = TRUE)),
-  `True Metric (SD)` = c(sd(r_pos_true, na.rm = TRUE), sd(r_neg_true, na.rm = TRUE), sd(r_both_true, na.rm = TRUE)),
-  `p-value (One-Tail)` = c(p_pos_onetail, p_neg_onetail, p_both_onetail),
-  `p-value (Two-Tail)` = c(p_pos_twotail, p_neg_twotail, p_both_twotail)))
 
 (df_boxplot <- tibble(
   `Null Model Size` = c(length(r_pos_null), length(r_neg_null), length(r_both_null)),
@@ -136,9 +135,10 @@ df_p_table <- tibble(
   `p-value (One-Tail)` = c(p_pos_onetail, p_neg_onetail, p_both_onetail),
   `p-value (Two-Tail)` = c(p_pos_twotail, p_neg_twotail, p_both_twotail))
 
-#-----------------------------------------#
-# TABLE FOR ACCURACY OVER ITERATIONS 
-#-----------------------------------------#
+#----------------------------------------#
+#--TABLE FOR ACCURACY ACROSS ITERATIONS--#
+#----------------------------------------#
+
 df_gt <- df_p_table %>%
   gt(rowname_col = "Edge") %>%
   tab_header(
@@ -182,7 +182,7 @@ df_gt <- df_p_table %>%
 print(df_gt)  
 
 #------------------------------#
-#     PERFORMANCE BOXPLOTS     #
+#---Boxplot with Performance---#
 #------------------------------#
 
 level_order <- c('Positive', 'Negative', 'Both') 
@@ -236,7 +236,7 @@ r_true_df <- data.frame(Positive = r_pos_true,
                                  'Negative' = 'blue',
                                  'Both' = 'purple')))
 
-# output_file <- file.path(read_path, "boxplot_performance.jpeg")
-#  ggsave(filename = output_file, plot = r_true_boxplot, dpi = 300, width = 8, height = 6, units = "in")
+output_file <- file.path(read_path, "boxplot_performance.jpeg")
+ggsave(filename = output_file, plot = r_true_boxplot, dpi = 300, width = 8, height = 6, units = "in")
 
                               
