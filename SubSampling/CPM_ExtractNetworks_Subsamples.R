@@ -1,21 +1,4 @@
-# =============================================================================
-# Combined CPM Consensus, Canonical Networks, and Visualization Pipeline
-# with Subsampling Support
-# =============================================================================
-# This script performs the following:
-# 1. For each subsample (or a single sample if subsampling is not used):
-#    - Reads positive and negative CPM network files across iterations/folds.
-#    - Computes consensus networks (i.e. average edge presence across iterations).
-# 2. Averages the consensus networks across subsamples (if multiple).
-# 3. Applies thresholds to the averaged consensus networks,
-#    extracts significant edges, and generates network heatmaps.
-# 4. Rearranges the averaged networks into canonical networks using Shen atlas
-#    mappings and generates summary heatmaps.
-# =============================================================================
 
-# ---------------------------
-# SECTION 0: Setup and Library Loading
-# ---------------------------
 library(tidyverse)
 library(purrr)
 library(readr)
