@@ -25,7 +25,7 @@ n_repeats    <- 100 # Number of true repeats
 n_iterations <- 1000 # Null (permutation) iterations
 lst_of_i     <- 1:(n_repeats + n_iterations)
 
-# Vectors to store output
+#~~~~Vectors to store output~~~~#
 r_pos  <- numeric()
 r_neg  <- numeric()
 r_both <- numeric()

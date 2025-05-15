@@ -214,7 +214,6 @@ cat("Module sizes:", module_size, "\n")
 network_labels <- c("Medial Frontal", "Frontoparietal", "Default", "Motor/Sensory", "Visual",
                     "Visual B", "Visual Association", "Salience", "Subcortical", "Brainstem & Cerebellum")
 
-
 #~~~~Process Positive Canonical Network~~~~#
 data_pos_canon <- read.delim(file.path(results_dir, "correlation_canonical_rearr_pos.txt"),
                              header = FALSE, stringsAsFactors = FALSE, sep = " ")

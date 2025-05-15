@@ -112,8 +112,8 @@ print(j_overlap_pos)
 print(length(lst_sig_edges_overlap_pos))
 print(sum(data_threshold_overlap_positive) / 2)
 
-
-#~~SAVE SIGNIFICANT POSITIVE EDGES AFTER APPLYING THRESHOLD~~#
+# 
+# ~~SAVE SIGNIFICANT POSITIVE EDGES AFTER APPLYING THRESHOLD~~#
 # write_conn_overlap <- file(file.path(write_path, paste0("sig_edges_overlap_thresh", thresh, ".txt")), "w")
 # for (edge in lst_sig_edges) {
 #   writeLines(paste(edge, collapse = "\t"), write_conn_overlap)
@@ -165,7 +165,7 @@ print(length(lst_sig_edges_overlap_neg))
 print(sum(data_threshold_overlap_negative) / 2)
 
 
-#~~SAVE SIGNIFICANT POSITIVE EDGES AFTER APPLYING THRESHOLD~~#
+# ~~SAVE SIGNIFICANT POSITIVE EDGES AFTER APPLYING THRESHOLD~~#
 # write_conn_overlap <- file(file.path(write_path, paste0("sig_edges_overlap_thresh", thresh, ".txt")), "w")
 # for (edge in lst_sig_edges) {
 #   writeLines(paste(edge, collapse = "\t"), write_conn_overlap)
@@ -173,7 +173,7 @@ print(sum(data_threshold_overlap_negative) / 2)
 # close(write_conn_overlap)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-x_labels <- c("Medial Frontal", 
+network_labels <- c("Medial Frontal", 
               "Frontoparietal", 
               "Default",
               "Motor & Sensory", 
@@ -184,7 +184,7 @@ x_labels <- c("Medial Frontal",
               "Subcortical", 
               "Brainstem & Cerebellum")
 
-y_labels <- rev(x_labels)
+network_labels_reversed <- rev(x_labels)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 create_heatmap_plot_positive <- function(data, x, y, fill) {
   min_fill <- min(data[[fill]], na.rm = TRUE)
@@ -198,8 +198,8 @@ create_heatmap_plot_positive <- function(data, x, y, fill) {
                          limits = c(min_fill, max_fill),
                          na.value = "white") + 
     scale_color_identity() +
-    scale_x_discrete(labels = x_labels) +
-    scale_y_discrete(labels = y_labels) +
+    scale_x_discrete(labels = network_labels) +
+    scale_y_discrete(labels = network_labels_reversed) +
     labs(x = "", y = "", title = "Positive Edge Overlap") +
     theme_minimal() +
     theme(text = element_text(family = "Arial"),
@@ -227,8 +227,8 @@ create_heatmap_plot_negative <- function(data, x, y, fill) {
                          limits = c(min_fill, max_fill),
                          na.value = "white" ) +
     scale_color_identity() +
-    scale_x_discrete(labels = x_labels) + 
-    scale_y_discrete(labels = y_labels) +
+    scale_x_discrete(labels = network_labels) + 
+    scale_y_discrete(labels = network_labels_reversed) +
     labs(x = "", y = "", title = "Negative Edge Overlap") +
     theme_minimal() +
     theme(text = element_text(family = "Arial"),
@@ -258,8 +258,8 @@ mask_overlap_pos <- data.frame(x = mask_data_1_pos$x,
   mutate(value_abs = abs(value1-value2)) %>%
   mutate(value = value1-value2)
 
-mask_overlap_pos$x <- factor(mask_overlap_pos$x, levels = x_labels)
-mask_overlap_pos$y <- factor(mask_overlap_pos$y, levels = rev(x_labels))
+mask_overlap_pos$x <- factor(mask_overlap_pos$x, levels = network_labels)
+mask_overlap_pos$y <- factor(mask_overlap_pos$y, levels = rev(network_labels))
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 (positive_edge_plot <- create_heatmap_plot_positive(mask_overlap_pos, "x", "y", "value_abs"))
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -270,8 +270,8 @@ mask_overlap_neg <- data.frame(x = mask_data_1_neg$x,
   mutate(value_abs = abs(value1-value2)) %>% 
   mutate(value = value1-value2)
 
-mask_overlap_neg$x <- factor(mask_overlap_neg$x, levels = x_labels)
-mask_overlap_neg$y <- factor(mask_overlap_neg$y, levels = rev(x_labels))
+mask_overlap_neg$x <- factor(mask_overlap_neg$x, levels = network_labels)
+mask_overlap_neg$y <- factor(mask_overlap_neg$y, levels = rev(network_labels))
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 (negative_edge_plot <- create_heatmap_plot_negative(mask_overlap_neg, "x", "y", "value_abs"))
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
