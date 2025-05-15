@@ -167,6 +167,11 @@ output_file <- file.path(output_path, "negative_edge_nonetwork.jpeg")
 ggsave(filename = output_file, plot = negative_edge_nonetwork, dpi = 300, width = 8, height = 6, units = "in")
 
 
+
+
+
+
+
 #~~~~Canonical Networks Rearrangement~~~~#
 results_dir <- file.path(output_path, "canonical_networks")
 if (!dir.exists(results_dir)) {
@@ -199,8 +204,6 @@ for (i in 1:num_module) {
   write.table(as.character(tmp_module), file = out_file, row.names = FALSE, col.names = FALSE, quote = FALSE)
 }
 
-
-#~~~~Canonical Network Heatmaps~~~~#
 
 #~~~~Module File List~~~#
 module_files <- list.files(path = results_dir, pattern = "module.*_comp_realvalued\\.txt", full.names = TRUE)

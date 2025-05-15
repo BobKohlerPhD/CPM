@@ -1,4 +1,11 @@
 
+#~~~~This script performs the following for each subsample~~~~#
+# 1. Extracts positive and negative networks for each subsample
+# 2. Applies thresholds to extract significant edge 
+# 3. Rearranges networks based on Shen atlas
+# 4. Generates heatmaps of  significant edges
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
 library(tidyverse)
 library(purrr)
 library(readr)
@@ -7,37 +14,36 @@ library(stringr)
 library(reshape2)
 library(scales)
 
-# Global paths (adjust these as needed)
 base_path   <- "/Users/bobkohler/Desktop/hormone_cpm"
-default_path <- file.path(base_path, "hormone_cpm_output/cpm_output_pds/female_pds_rest")
+output_path <- file.path(base_path, "hormone_cpm_output/cpm_output_pds/female_pds_rest")
 shen_path   <- file.path(base_path, "shen268")
 
-# If using multiple subsamples, provide a vector of directories.
-# For example, if you have six subsamples, you might use:
+
 # subsample_paths <- c("/path/to/subsample1", "/path/to/subsample2", "/path/to/subsample3",
 #                      "/path/to/subsample4", "/path/to/subsample5", "/path/to/subsample6")
-# If not using subsampling, leave as a single-element vector:
-subsample_paths <- c()  # Leave empty or use: c(default_path)
+subsample_paths <- c()
 
-# Use default_path if no subsample directories are provided
-if(length(subsample_paths) == 0) {
-  subsample_paths <- c(default_path)
-}
 
-# CPM parameters
-n_repeats <- 100   # Number of CPM repeats (true iterations)
-n_folds   <- 10    # Number of CV folds
+#~~~~Define CPM Predictive Model Parameters~~~~#
+n_repeats <- 100   # CPM repeats (usually 100)
+n_folds   <- 10    # CV folds
+lst_of_folds <- 1:n_folds
 
-# ---------------------------
-# SECTION 1: Consensus Extraction Function
-# ---------------------------
-# Function to compute consensus networks (positive & negative) for a given CPM output directory.
+#~~~~Read in node list~~~~#
+lst_rois  <- readLines(file.path(shen_path, "lst_nodes_orig.txt"))
+num_nodes <- length(lst_rois)
+cat("Number of nodes:", num_nodes, "\n")
+
+#~~~~Define edge threshold~~~~#
+thresh    <- 1.00
+
+# Positive and negative network consensus for a given CPM subsample
 get_consensus_networks <- function(pred_dir, n_repeats, n_folds) {
   # Initialize lists for positive and negative networks
   network_p <- list()
   network_n <- list()
   
-  # Loop over iterations and folds for positive networks
+  # Positive Edge Networks
   for (i in 1:n_repeats) {
     for (fold in 1:n_folds) {
       message(sprintf("Reading POSITIVE: iter %d, fold %d from %s", i, fold, pred_dir))
@@ -60,7 +66,7 @@ get_consensus_networks <- function(pred_dir, n_repeats, n_folds) {
     stop("No positive network files found in ", pred_dir)
   }
   
-  # Repeat for negative networks
+  # Negative Edge Networks
   for (i in 1:n_repeats) {
     for (fold in 1:n_folds) {
       message(sprintf("Reading NEGATIVE: iter %d, fold %d from %s", i, fold, pred_dir))
@@ -85,35 +91,22 @@ get_consensus_networks <- function(pred_dir, n_repeats, n_folds) {
        neg_consensus = neg_consensus)
 }
 
-# ---------------------------
-# SECTION 2: Average Consensus Across Subsamples
-# ---------------------------
-# For each subsample directory, compute the consensus networks.
+#~~~Compute the consensus networks for each subsample and average across subsamples~~~~#
 consensus_list <- lapply(subsample_paths, function(path) {
   get_consensus_networks(path, n_repeats, n_folds)
 })
 
-# Average the consensus matrices across subsamples element-wise.
-# (Assumes all matrices are of identical dimensions.)
+
 avg_pos_consensus <- Reduce("+", lapply(consensus_list, function(x) x$pos_consensus)) / length(consensus_list)
 avg_neg_consensus <- Reduce("+", lapply(consensus_list, function(x) x$neg_consensus)) / length(consensus_list)
 
-# Optionally, write the averaged consensus networks to files.
 write.table(avg_pos_consensus, file = file.path(default_path, "network_pos_consensus.txt"),
             row.names = FALSE, col.names = FALSE)
 write.table(avg_neg_consensus, file = file.path(default_path, "network_neg_consensus.txt"),
             row.names = FALSE, col.names = FALSE)
 
-# ---------------------------
-# SECTION 3: Thresholding and Visualization of Networks
-# ---------------------------
-# Read in node list and set threshold for significant edges.
-lst_rois  <- readLines(file.path(shen_path, "lst_nodes_orig.txt"))
-num_nodes <- length(lst_rois)
-cat("Number of nodes:", num_nodes, "\n")
-thresh    <- 1.00
 
-# Process Positive Consensus Network
+#~~~~Positive Network~~~~#
 data_pos <- avg_pos_consensus
 data_thresh_pos <- (data_pos >= thresh) * 1.0
 write.table(data_thresh_pos, file = file.path(default_path, sprintf("net_pos_thresh_%.1f.txt", thresh)),
@@ -136,7 +129,7 @@ for (edge in lst_sig_edges_pos) {
 }
 close(write_conn_pos)
 
-# Process Negative Consensus Network
+#~~~~Negative Network~~~~#
 data_neg <- avg_neg_consensus
 data_thresh_neg <- (data_neg >= thresh) * 1
 write.table(data_thresh_neg, file = file.path(default_path, sprintf("net_neg_thresh_%.1f.txt", thresh)),
@@ -159,8 +152,8 @@ for (edge in lst_sig_edges_neg) {
 }
 close(write_conn_neg)
 
-# Visualization: Create heatmap plots for the thresholded networks.
-# Positive network heatmap.
+
+#~~~~Positive edge heatmap~~~~#
 pos_threshold_df <- as.data.frame(as.table(data_thresh_pos))
 colnames(pos_threshold_df) <- c("Row", "Column", "Value")
 pos_threshold_df <- pos_threshold_df %>% mutate(Sum = as.numeric(Row) + as.numeric(Column))
@@ -184,7 +177,7 @@ output_file <- file.path(default_path, "positive_edge_nonetwork.jpeg")
 ggsave(filename = output_file, plot = positive_edge_nonetwork,
        dpi = 300, width = 8, height = 6, units = "in")
 
-# Negative network heatmap.
+#~~~~Negative edge heatmap~~~~#
 neg_threshold_df <- as.data.frame(as.table(data_thresh_neg))
 colnames(neg_threshold_df) <- c("Row", "Column", "Value")
 neg_threshold_df <- neg_threshold_df %>% mutate(Sum = as.numeric(Row) + as.numeric(Column))
@@ -208,31 +201,32 @@ output_file <- file.path(default_path, "negative_edge_nonetwork.jpeg")
 ggsave(filename = output_file, plot = negative_edge_nonetwork,
        dpi = 300, width = 8, height = 6, units = "in")
 
-# ---------------------------
-# SECTION 4: Canonical Networks Rearrangement
-# ---------------------------
+
+
+#~~~~Canonical Networks Rearrangement~~~~#
 results_dir <- file.path(default_path, "canonical_networks")
 if (!dir.exists(results_dir)) {
   dir.create(results_dir)
 }
 
-# Read Shen atlas mapping files
+#~~~~Read in atlas mapping files (Shen atlas is used here)~~~~#
 lst_rois_mat <- readMat(file.path(shen_path, "lst_rois.mat"))
-nets         <- readMat(file.path(shen_path, "nets.mat")) %>% unlist()
-lst_nodes_txt<- readLines(file.path(shen_path, "lst_nodes_orig.txt"))
-nodes        <- readMat(file.path(shen_path, "nodes.mat")) %>% unlist() %>% as.numeric()
+nets <- readMat(file.path(shen_path, "nets.mat")) %>% unlist()
+lst_nodes_txt <- readLines(file.path(shen_path, "lst_nodes_orig.txt"))
+nodes <- readMat(file.path(shen_path, "nodes.mat")) %>% unlist() %>% as.numeric()
 
-# Rearrange averaged positive consensus network according to canonical ordering
+
+#~~~~Rearrange averaged networks~~~~#
 correlation_rearr_pos <- avg_pos_consensus[nodes, nodes]
 fn_corr_rearr_mat_pos <- file.path(results_dir, "correlation_canonical_rearr_pos.txt")
 write.table(correlation_rearr_pos, fn_corr_rearr_mat_pos, row.names = FALSE, col.names = FALSE)
 
-# Rearrange averaged negative consensus network
+
 correlation_rearr_neg <- avg_neg_consensus[nodes, nodes]
 fn_corr_rearr_mat_neg <- file.path(results_dir, "correlation_canonical_rearr_neg.txt")
 write.table(correlation_rearr_neg, fn_corr_rearr_mat_neg, row.names = FALSE, col.names = FALSE)
 
-# Optionally, output module compositions per network based on the atlas
+#~~~~Output module compositions per network based on the atlas~~~~#
 num_module   <- max(nets)
 module_sizes <- sapply(1:num_module, function(i) sum(nets == i)) %>% as.character()
 modules      <- list()
@@ -244,10 +238,8 @@ for (i in 1:num_module) {
               row.names = FALSE, col.names = FALSE, quote = FALSE)
 }
 
-# ---------------------------
-# SECTION 5: Canonical Networks Summary and Heatmaps
-# ---------------------------
-# Get list of module files and compute module sizes
+
+#~~~~Module File List~~~#
 module_files <- list.files(path = results_dir, pattern = "module.*_comp_realvalued\\.txt", full.names = TRUE)
 module_names <- module_files[!str_detect(module_files, "modules_comp")]
 module_names <- module_names[order(as.numeric(str_extract(basename(module_names), "\\d+")))]
@@ -255,15 +247,16 @@ cat("Number of modules:", length(module_names), "\n")
 module_size <- sapply(module_names, function(fn) length(read_lines(fn)))
 cat("Module sizes:", module_size, "\n")
 
+#~~~~Define network names (adjust as needed)~~~~#
+network_labels <- c("Medial Frontal", "Frontoparietal", "Default", "Motor/Sensory", "Visual",
+                    "Visual B", "Visual Association", "Salience", "Subcortical", "Brainstem & Cerebellum")
+
+
 # Read in canonical node list if available (e.g., combined modules file)
 lst_rois_canonical <- read_lines(file.path(results_dir, "modules_comp_realvalued.txt"))
 
-# Define canonical network names (adjust as needed)
-lst_nets <- c('medial frontal', 'frontoarietal', 'default', 'motor/sensory', 'visual', 
-              'visual b', 'visual association', 'salience', 'subcortical', 'brainstem/cerebellum')
-cat("Number of canonical networks:", length(lst_nets), "\n")
 
-# --- Process Positive Canonical Network ---
+#~~~~Process Positive Canonical Network~~~~#
 data_pos_canon <- read.delim(file.path(results_dir, "correlation_canonical_rearr_pos.txt"),
                              header = FALSE, stringsAsFactors = FALSE, sep = " ")
 data_matrix_pos <- data.frame(lapply(data_pos_canon, as.numeric))
@@ -299,7 +292,7 @@ df_pos <- df_pos %>% mutate(across(everything(), as.numeric))
 mask_pos <- lower.tri(df_pos, diag = FALSE)
 df_pos[mask_pos] <- NA
 
-# --- Process Negative Canonical Network ---
+#~~~~Process Negative Canonical Network~~~~#
 data_neg_canon <- read.delim(file.path(results_dir, "correlation_canonical_rearr_neg.txt"),
                              header = FALSE, stringsAsFactors = FALSE, sep = " ")
 data_matrix_neg <- data.frame(lapply(data_neg_canon, as.numeric))
@@ -335,12 +328,10 @@ df_neg <- df_neg %>% mutate(across(everything(), as.numeric))
 mask_neg <- lower.tri(df_neg, diag = FALSE)
 df_neg[mask_neg] <- NA
 
-# --- Generate Heatmap Plots for Canonical Networks ---
-x_labels <- c("Medial Frontal", "Frontoparietal", "Default", "Motor/Sensory", "Visual",
-              "Visual B", "Visual Association", "Salience", "Subcortical", "Brainstem & Cerebellum")
-y_labels <- rev(x_labels)
+#~~~~Network Heatmap Functions~~~~#
+network_labels_reversed <- rev(network_labels) # Reverse for Y axis 
 
-create_heatmap_plot <- function(data, x, y, fill, x_labels, y_labels) {
+create_heatmap_plot <- function(data, x, y, fill, network_labels, network_labels_reversed) {
   min_fill <- min(data[[fill]], na.rm = TRUE)
   max_fill <- max(data[[fill]], na.rm = TRUE)
   ggplot(data, aes_string(x = x, y = y, fill = fill)) +
@@ -354,8 +345,8 @@ create_heatmap_plot <- function(data, x, y, fill, x_labels, y_labels) {
       na.value = "white"
     ) +
     scale_color_identity() +
-    scale_x_discrete(labels = x_labels) +
-    scale_y_discrete(labels = y_labels) +
+    scale_x_discrete(labels = network_labels) +
+    scale_y_discrete(labels = network_labels_reversed) +
     labs(x = "", y = "") +
     theme_minimal() +
     theme(text = element_text(family = "Arial"),
@@ -365,7 +356,7 @@ create_heatmap_plot <- function(data, x, y, fill, x_labels, y_labels) {
     coord_fixed()
 }
 
-create_heatmap_plot_negative <- function(data, x, y, fill, x_labels, y_labels) {
+create_heatmap_plot_negative <- function(data, x, y, fill, network_labels, network_labels_reversed) {
   min_fill <- min(data[[fill]], na.rm = TRUE)
   max_fill <- max(data[[fill]], na.rm = TRUE)
   ggplot(data, aes_string(x = x, y = y, fill = fill)) +
@@ -379,8 +370,8 @@ create_heatmap_plot_negative <- function(data, x, y, fill, x_labels, y_labels) {
       na.value = "white"
     ) +
     scale_color_identity() +
-    scale_x_discrete(labels = x_labels) +
-    scale_y_discrete(labels = y_labels) +
+    scale_x_discrete(labels = network_labels) +
+    scale_y_discrete(labels = network_labels_reversed) +
     labs(x = "", y = "") +
     theme_minimal() +
     theme(text = element_text(family = "Arial"),
@@ -390,22 +381,18 @@ create_heatmap_plot_negative <- function(data, x, y, fill, x_labels, y_labels) {
     coord_fixed()
 }
 
-# Generate and save Positive Canonical Heatmap
+#~~~~Positive Heatmap~~~~#
 df_pos_melt <- melt(as.matrix(df_pos), varnames = c("x", "y"), value.name = "value")
 df_pos_melt$y <- factor(df_pos_melt$y, levels = rev(colnames(df_pos)))
-positive_edge_plot <- create_heatmap_plot(df_pos_melt, "x", "y", "value", x_labels, y_labels)
+positive_edge_plot <- create_heatmap_plot(df_pos_melt, "x", "y", "value", network_labels, network_labels_reversed)
 output_file <- file.path(default_path, "positive_edge_plot.jpeg")
 ggsave(filename = output_file, plot = positive_edge_plot,
        dpi = 300, width = 8, height = 6, units = "in")
 
-# Generate and save Negative Canonical Heatmap
+#~~~~Negative Heatmap~~~~#
 df_neg_melt <- melt(as.matrix(df_neg), varnames = c("x", "y"), value.name = "value")
 df_neg_melt$y <- factor(df_neg_melt$y, levels = rev(colnames(df_neg)))
-negative_edge_plot <- create_heatmap_plot_negative(df_neg_melt, "x", "y", "value", x_labels, y_labels)
+negative_edge_plot <- create_heatmap_plot_negative(df_neg_melt, "x", "y", "value", network_labels, network_labels_reversed)
 output_file <- file.path(default_path, "negative_edge_plot.jpeg")
 ggsave(filename = output_file, plot = negative_edge_plot,
        dpi = 300, width = 8, height = 6, units = "in")
-
-# =============================================================================
-# End of Combined Pipeline Script with Subsampling (Scripts 2-5)
-# =============================================================================
