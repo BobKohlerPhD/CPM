@@ -1,6 +1,7 @@
 library(R.matlab)
 library(tidyverse)
 
+# This script allows for sub-sampling when applicable
 read_path1 <- "/Users/bobkohler/Desktop/hormone_cpm/CPM Hormone Output/hormone_cpm_output/subsample_sex/subsample4_sex_logistic/"
 read_path2 <- '/Users/bobkohler/Desktop/hormone_cpm/CPM Hormone Output/hormone_cpm_output/subsample_sex/subsample5_sex_logistic/'
 

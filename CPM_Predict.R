@@ -1,8 +1,9 @@
-# =============================================================================
-# This script reads in CPM output files from each iteration, 
-# computes performance metrics, and creates summary table/plots.
-# =============================================================================
-read_path <- "/Users/bobkohler/Desktop/hormone_cpm/hormone_cpm_output/cpm_output_pds/female_pds_rest/"
+
+#~~~~This script performs the following~~~~#
+# 1. Reads in CPM model output files 
+# 2. Compute performance metrics
+# 3. Creates visualizations of performance
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 library(tidyverse)
 library(purrr)
@@ -12,28 +13,25 @@ library(readxl)
 library(writexl)
 options(scipen = 999)
 
-#------------------------------#
-#         Parameters           #
-#------------------------------#
+#~~~~Path to CPM output folder~~~~#
+read_path <- "/Users/bobkohler/Desktop/hormone_cpm/hormone_cpm_output/cpm_output_pds/female_pds_rest/"
 
-# Set regression ("linear" or "logistic")
-regression_type <- "linear"
 
-# Number of true CPM repeats and null (permutation) iterations
-n_repeats    <- 100
-n_iterations <- 1000
+#~~~~CPM Parameters that were used~~~~#
+regression_type <- "linear" # Type of Regression ("linear" or "logistic" currently implemented)
+
+
+n_repeats    <- 100 # Number of true repeats
+n_iterations <- 1000 # Null (permutation) iterations
 lst_of_i     <- 1:(n_repeats + n_iterations)
 
-# Initialize vectors to store performance metrics
+# Vectors to store output
 r_pos  <- numeric()
 r_neg  <- numeric()
 r_both <- numeric()
-
-#------------------------------#
-#   Data from Iterations       #
-#------------------------------#
-
 data_list <- vector("list", length(lst_of_i))
+
+#~~~~Loop through output folder for y_prediction csv files~~~~#
 for (i in lst_of_i) {
   file_path <- file.path(read_path, sprintf("y_prediction_iter%d.csv", i))
   if (file.exists(file_path)) {
@@ -49,12 +47,9 @@ for (i in lst_of_i) {
   }
 }
 
-#--------------------------------#
-# Calculate Performance Measures #  
-#--------------------------------#
-
+#~~~~Calculate Model Performance~~~~#  
 for (data in data_list) {
-  if (is.null(data)) next  # Skip missing entries
+  if (is.null(data)) next 
   if (regression_type == "linear") {
     r_pos  <- c(r_pos,  cor(data$y_pos,  data$y_actual, method = "spearman", use = "complete.obs"))
     r_neg  <- c(r_neg,  cor(data$y_neg,  data$y_actual, method = "spearman", use = "complete.obs"))
@@ -69,7 +64,7 @@ for (data in data_list) {
   }
 }
 
-# Separate true (first n_repeats) and null (remaining iterations) metrics
+#~~~~Separate true (first n_repeats) and null (remaining iterations) performance~~~~#
 r_pos_true  <- r_pos[1:n_repeats]
 r_neg_true  <- r_neg[1:n_repeats]
 r_both_true <- r_both[1:n_repeats]
@@ -77,18 +72,8 @@ r_pos_null  <- r_pos[(n_repeats + 1):length(r_pos)]
 r_neg_null  <- r_neg[(n_repeats + 1):length(r_neg)]
 r_both_null <- r_both[(n_repeats + 1):length(r_both)]
 
-# Print performance for true models
-metric_name <- ifelse(regression_type == "linear", "True Spearman r (Average)", "True Accuracy (Average)")
 
-cat(sprintf("%s: Positive %.4f, Negative %.4f, Both %.4f\n", 
-            metric_name,
-            mean(r_pos_true, na.rm = TRUE),
-            mean(r_neg_true, na.rm = TRUE),
-            mean(r_both_true, na.rm = TRUE)))
-
-#------------------------------#
-#      Compute p-values        #
-#------------------------------#
+#~~~~Compute p-values~~~~#
 p_value_one_tail <- function(null, true_mean) {
   if (true_mean >= 0) {
     mean(null >= true_mean, na.rm = TRUE)
@@ -102,20 +87,18 @@ p_value_two_tail <- function(null, true_mean) {
   mean(abs(null) >= abs(true_mean), na.rm = TRUE)
 }
 
-# One tail
+#~~~~One tail~~~~#
 p_pos_onetail  <- p_value_one_tail(r_pos_null,  mean(r_pos_true))
 p_neg_onetail  <- p_value_one_tail(r_neg_null,  mean(r_neg_true))
 p_both_onetail <- p_value_one_tail(r_both_null, mean(r_both_true))
 
-# Two tail 
+#~~~~Two tail~~~~#
 p_pos_twotail  <- p_value_two_tail(r_pos_null,  mean(r_pos_true))
 p_neg_twotail  <- p_value_two_tail(r_neg_null,  mean(r_neg_true))
 p_both_twotail <- p_value_two_tail(r_both_null, mean(r_both_true))
 
-#------------------------------#
-#-------Summary Tables---------#
-#------------------------------#
 
+#~~~~Summary Tables of CPM Performance~~~#
 (df_boxplot <- tibble(
   `Null Model Size` = c(length(r_pos_null), length(r_neg_null), length(r_both_null)),
   `True Model Size` = c(length(r_pos_true), length(r_neg_true), length(r_both_true)),
@@ -135,10 +118,8 @@ df_p_table <- tibble(
   `p-value (One-Tail)` = c(p_pos_onetail, p_neg_onetail, p_both_onetail),
   `p-value (Two-Tail)` = c(p_pos_twotail, p_neg_twotail, p_both_twotail))
 
-#----------------------------------------#
-#--TABLE FOR ACCURACY ACROSS ITERATIONS--#
-#----------------------------------------#
 
+#~~~~Accuracy across iterations~~~~#
 df_gt <- df_p_table %>%
   gt(rowname_col = "Edge") %>%
   tab_header(
@@ -181,10 +162,10 @@ df_gt <- df_p_table %>%
     column_labels.border.bottom.color = "black")
 print(df_gt)  
 
-#------------------------------#
-#---Boxplot with Performance---#
-#------------------------------#
 
+
+
+#~~~~Boxplot of Performance~~~~#
 level_order <- c('Positive', 'Negative', 'Both') 
 create_plot <- function(data, x_var, y_var, edge_var, level_order, fill_values, color_values) {
   ggplot(data, aes(x = factor(!!rlang::sym(x_var), levels = level_order), 
