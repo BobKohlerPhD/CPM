@@ -248,10 +248,7 @@ mask_data_1_neg <- read.csv(file.path(read_path1, "mask_neg_thresh_1.csv"))
 
 mask_data_2_pos <- read.csv(file.path(read_path2, "mask_pos_thresh_1.csv")) 
 mask_data_2_neg <- read.csv(file.path(read_path2, "mask_neg_thresh_1.csv")) 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-desired_levels <- c("medial frontal", "frontoarietal", "default", "motor/sensory",    
-                    "visual", "visual b", "visual association", "salience",       
-                    "subcortical", "brainstem/cerebellum")
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 mask_overlap_pos <- data.frame(x = mask_data_1_pos$x, 
                                y = mask_data_1_pos$y, 
@@ -260,8 +257,8 @@ mask_overlap_pos <- data.frame(x = mask_data_1_pos$x,
   mutate(value_abs = abs(value1-value2)) %>%
   mutate(value = value1-value2)
 
-mask_overlap_pos$x <- factor(mask_overlap_pos$x, levels = desired_levels)
-mask_overlap_pos$y <- factor(mask_overlap_pos$y, levels = rev(desired_levels))
+mask_overlap_pos$x <- factor(mask_overlap_pos$x, levels = x_labels)
+mask_overlap_pos$y <- factor(mask_overlap_pos$y, levels = rev(x_labels))
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 (positive_edge_plot <- create_heatmap_plot_positive(mask_overlap_pos, "x", "y", "value_abs"))
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -272,8 +269,8 @@ mask_overlap_neg <- data.frame(x = mask_data_1_neg$x,
   mutate(value_abs = abs(value1-value2)) %>% 
   mutate(value = value1-value2)
 
-mask_overlap_neg$x <- factor(mask_overlap_neg$x, levels = desired_levels)
-mask_overlap_neg$y <- factor(mask_overlap_neg$y, levels = rev(desired_levels))
+mask_overlap_neg$x <- factor(mask_overlap_neg$x, levels = x_labels)
+mask_overlap_neg$y <- factor(mask_overlap_neg$y, levels = rev(x_labels))
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 (negative_edge_plot <- create_heatmap_plot_negative(mask_overlap_neg, "x", "y", "value_abs"))
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
