@@ -79,7 +79,7 @@ cat("Number of nodes:", num_nodes, "\n")
 thresh    <- 1.00
 
 # --- Process Positive Consensus Network ---
-data_pos        <- as.matrix(read.table(file.path(output_path, "network_pos_consensus.txt")))
+data_pos <- as.matrix(read.table(file.path(output_path, "network_pos_consensus.txt")))
 data_thresh_pos <- (data_pos >= thresh) * 1.0
 write.table(data_thresh_pos, 
             file.path(output_path, sprintf("net_pos_thresh_%.1f.txt", thresh)), 
@@ -103,7 +103,7 @@ for (edge in lst_sig_edges_pos) {
 close(write_conn_pos)
 
 # --- Process Negative Consensus Network ---
-data_neg        <- as.matrix(read.table(file.path(output_path, "network_neg_consensus.txt")))
+data_neg <- as.matrix(read.table(file.path(output_path, "network_neg_consensus.txt")))
 data_thresh_neg <- (data_neg >= thresh) * 1
 write.table(data_thresh_neg, 
             file.path(output_path, sprintf("net_neg_thresh_%.1f.txt", thresh)), 
@@ -267,6 +267,7 @@ df_pos[mask_pos] <- NA
 data_neg_canon <- read.delim(file.path(results_dir, "correlation_canonical_rearr_neg.txt"),
                              header = FALSE, stringsAsFactors = FALSE, sep = " ")
 data_matrix_neg <- data.frame(lapply(data_neg_canon, as.numeric))
+
 data_thresh_neg_canon <- ifelse(data_matrix_neg == thresh, 1, 0)
 
 df_neg       <- matrix(NA, nrow = length(lst_nets), ncol = length(lst_nets), 
@@ -368,6 +369,3 @@ negative_edge_plot <- create_heatmap_plot_negative(df_neg_melt, "x", "y", "value
 output_file <- file.path(output_path, "negative_edge_plot.jpeg")
 ggsave(filename = output_file, plot = negative_edge_plot, dpi = 300, width = 8, height = 6, units = "in")
 
-# =============================================================================
-# End of Combined Pipeline Script (Scripts 2-5)
-# =============================================================================
