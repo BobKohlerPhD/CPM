@@ -8,15 +8,13 @@
 
 
 library(tidyverse)
-library(purrr)
-library(readr)
 library(R.matlab)
 library(stringr)
 library(reshape2)
 library(scales)
 
-base_path   <- "/Users/bobkohler/Desktop/hormone_cpm"
-output_path <- file.path(base_path, "hormone_cpm_output/cpm_output_pds/female_pds_rest")
+base_path   <- ""
+output_path <- file.path(base_path, "")
 shen_path   <- file.path(base_path, "shen268")
 
 

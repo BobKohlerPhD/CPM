@@ -6,15 +6,11 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 library(tidyverse)
-library(purrr)
-library(readr)
-library(tidyr)
-library(readxl)
-library(writexl)
+library(gt)
 options(scipen = 999)
 
 #~~~~Path to CPM output folder~~~~#
-read_path <- "/Users/bobkohler/Desktop/hormone_cpm/hormone_cpm_output/cpm_output_pds/female_pds_rest/"
+read_path <- "/Users/bobkohler/Downloads/output_oct/2024-10-22_10fold_p_thresh_0.05_repeat100_iter1000_timepoint_1_z0_mode_linear_mat_pds_combined_rest_id.txt_7304_t1_rest_matrices"
 
 
 #~~~~CPM Parameters that were used~~~~#
@@ -218,6 +214,6 @@ r_true_df <- data.frame(Positive = r_pos_true,
                                  'Both' = 'purple')))
 
 output_file <- file.path(read_path, "boxplot_performance.jpeg")
-ggsave(filename = output_file, plot = r_true_boxplot, dpi = 300, width = 8, height = 6, units = "in")
+#ggsave(filename = output_file, plot = r_true_boxplot, dpi = 300, width = 8, height = 6, units = "in")
 
                               

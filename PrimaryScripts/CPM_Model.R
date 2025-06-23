@@ -11,7 +11,12 @@ library(lubridate)
 library(ppcor) 
 
 #~~Model~~#
-train_cpm <- function(train_mat, train_behav, num_nodes, p_thresh = 0.05, mode = "linear", covariates = NULL) {
+train_cpm <- function(train_mat, 
+                      train_behav, 
+                      num_nodes,
+                      p_thresh = 0.05,
+                      mode = "linear",
+                      covariates = NULL) {
   # Check for covariates 
    if (!is.null(covariates)) { 
     if (is.data.frame(covariates)) {
@@ -38,14 +43,13 @@ train_cpm <- function(train_mat, train_behav, num_nodes, p_thresh = 0.05, mode =
   r_mat <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
   p_mat <- matrix(NA, nrow = num_nodes, ncol = num_nodes)
   upper_tri <- upper.tri(r_mat)
-  lower_tri <- lower.tri(r_mat)
   diag(r_mat) <- NA
   diag(p_mat) <- NA
   
   r_mat[upper_tri] <- r_lst
   p_mat[upper_tri] <- p_lst
-  r_mat[lower_tri] <- t(r_mat)[lower_tri]
-  p_mat[lower_tri] <- t(p_mat)[lower_tri]
+  r_mat[lower.tri(r_mat)] <- t(r_mat)[lower.tri(r_mat)]
+  p_mat[lower.tri(p_mat)] <- t(p_mat)[lower.tri(p_mat)]
   
   # Symmetry Check of r and p mats 
   if (!isSymmetric(r_mat) || !isSymmetric(p_mat)) {
@@ -55,7 +59,6 @@ train_cpm <- function(train_mat, train_behav, num_nodes, p_thresh = 0.05, mode =
   # Identify Significant Edges
   pos_edges <- (r_mat > 0) & (p_mat < p_thresh)
   neg_edges <- (r_mat < 0) & (p_mat < p_thresh)
-  
   # Sum positive and negative edges 
   pos_sum <- colSums(train_mat[pos_edges[upper_tri], , drop = FALSE])
   neg_sum <- colSums(train_mat[neg_edges[upper_tri], , drop = FALSE])
@@ -84,11 +87,15 @@ train_cpm <- function(train_mat, train_behav, num_nodes, p_thresh = 0.05, mode =
        both_estimator = both_estimator, 
        pos_edges = pos_edges, 
        neg_edges = neg_edges)
-}
+  }
 
 
 
-kfold_cpm <- function(x, y, k, p_thresh = 0.05, zscore = FALSE, mode = "linear", covariates = NULL) {
+kfold_cpm <- function(x, y, k,
+                      p_thresh = 0.05,
+                      zscore = FALSE, 
+                      mode = "linear", 
+                      covariates = NULL) {
   num_subs <- dim(x)[3]
   num_nodes <- dim(x)[1]
   upper_tri <- upper.tri(matrix(0, num_nodes, num_nodes))
@@ -127,9 +134,14 @@ kfold_cpm <- function(x, y, k, p_thresh = 0.05, zscore = FALSE, mode = "linear",
       test_mats <- scale(test_mats)
     }
     
-    cpm <- train_cpm(train_mats, train_behav, num_nodes, p_thresh, mode, covariates)
-    pos_sum <- rowSums(test_mats[cpm$pos_edges[upper_tri], , drop = FALSE])
-    neg_sum <- rowSums(test_mats[cpm$neg_edges[upper_tri], , drop = FALSE])
+    cpm <- train_cpm(train_mats, 
+                     train_behav,
+                     num_nodes,
+                     p_thresh,
+                     mode, 
+                     covariates)
+    pos_sum <- colSums(test_mats[cpm$pos_edges[upper_tri], , drop = FALSE])
+    neg_sum <- colSums(test_mats[cpm$neg_edges[upper_tri], , drop = FALSE])
     both <- pos_sum - neg_sum
     
     results$y_pred_pos[test_inds] <- predict(cpm$pos_estimator, pos_sum)
